@@ -136,18 +136,6 @@ const scheduler = () => {
     playOscillator(bassNote.freq, nextNoteTime, SECONDS_PER_BEAT * 0.6, 'triangle', 0.2);
 
     // 3. Melody (Eighth notes mapping)
-    // We play 2 melody notes per beat logic for simplicity in this loop
-    // Note: MELODY_SEQUENCE is roughly based on 0.5 beat steps.
-    // Let's iterate melody based on half-beats.
-    
-    // Actually, to keep it simple, let's just play melody notes that align with this beat?
-    // The previous implementation was a bit rigid. Let's rely on `currentSubBeatIndex`.
-    // But `scheduler` runs every `timer`.
-    // Let's just play the notes scheduled for this `nextNoteTime`.
-    
-    // IMPORTANT: The scheduler loop advances by 1 BEAT (SECONDS_PER_BEAT).
-    // So we need to schedule 2 eighth notes.
-    
     const note1 = MELODY_SEQUENCE[currentSubBeatIndex % MELODY_SEQUENCE.length];
     const time1 = nextNoteTime;
     if (note1 && note1.note) {
@@ -157,7 +145,6 @@ const scheduler = () => {
     const note2 = MELODY_SEQUENCE[(currentSubBeatIndex + 1) % MELODY_SEQUENCE.length];
     const time2 = nextNoteTime + (SECONDS_PER_BEAT / 2); // The 'and' count
     if (note2 && note2.note) {
-        // Only schedule if it fits before next beat? No, schedule it now.
          playOscillator(NOTES[note2.note as keyof typeof NOTES], time2, note2.len * SECONDS_PER_BEAT * 0.9, 'square', 0.15);
     }
     
@@ -211,7 +198,7 @@ export const stopBGM = () => {
   bgmNodes = [];
 };
 
-export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' | 'BOSS_HIT' | 'UNLOCK' | 'BOSS_DEFEATED' | 'GOLD_HIT' | 'BOMB_HIT' | 'JUMP' | 'CRASH') => {
+export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' | 'BOSS_HIT' | 'UNLOCK' | 'BOSS_DEFEATED' | 'GOLD_HIT' | 'BOMB_HIT' | 'JUMP' | 'CRASH' | 'EAT' | 'POWER_UP' | 'SMASH') => {
   const ctx = getAudioContext();
   if (!ctx) return;
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -306,7 +293,6 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc.start(t);
     osc.stop(t + 0.1);
   } else if (type === 'RHYTHM_HIT') {
-     // ... (Existing code kept same)
      const osc = ctx.createOscillator();
      const gain = ctx.createGain();
      osc.type = 'sine';
@@ -330,7 +316,6 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
      oinkOsc.start(t);
      oinkOsc.stop(t + 0.08);
   } else if (type === 'RHYTHM_MISS') {
-     // ... (Existing code)
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sawtooth';
@@ -343,7 +328,6 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc.start(t);
     osc.stop(t + 0.2);
   } else if (type === 'BOSS_HIT') {
-    // ... (Existing code)
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'square';
@@ -355,11 +339,11 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     gain.connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.1);
-  } else if (type === 'UNLOCK') {
-    // ... (Existing code)
+  } else if (type === 'UNLOCK' || type === 'POWER_UP') {
+    // Arpeggio
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'sine';
+    osc.type = 'triangle';
     osc.frequency.setValueAtTime(523.25, t); 
     osc.frequency.setValueAtTime(659.25, t + 0.1); 
     osc.frequency.setValueAtTime(783.99, t + 0.2); 
@@ -372,7 +356,6 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc.start(t);
     osc.stop(t + 1.0);
   } else if (type === 'BOSS_DEFEATED') {
-    // ... (Existing code)
     const bufferSize = ctx.sampleRate * 2;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -387,5 +370,31 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     noise.connect(gain);
     gain.connect(ctx.destination);
     noise.start(t);
+  } else if (type === 'EAT') {
+    // Slurp sound
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.linearRampToValueAtTime(600, t + 0.1);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.15);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  } else if (type === 'SMASH') {
+    // Break sound
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + 0.1);
+    gain.gain.setValueAtTime(0.5, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.1);
   }
 };
