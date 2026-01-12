@@ -36,6 +36,9 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
   const obstaclesRef = useRef<Obstacle[]>([]);
   const lastSpawnTimeRef = useRef(0);
   const scoreRef = useRef(0);
+  
+  // Ref to prevent ghost clicks (double firing on mobile)
+  const lastTouchTimeRef = useRef(0);
 
   // Initialize High Score
   useEffect(() => {
@@ -74,9 +77,17 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
         return;
     }
 
-    // 2. Prevent default browser behavior (scrolling, zooming) for gameplay touches
+    // 2. Prevent ghost clicks on mobile
+    // If touchstart fires, record time.
+    // If mousedown fires shortly after, ignore it.
+    const now = Date.now();
     if (e.type === 'touchstart') {
-        // e.preventDefault(); 
+        lastTouchTimeRef.current = now;
+        // Optional: e.preventDefault() if not passive, but the timestamp check is safer
+    } else if (e.type === 'mousedown') {
+        if (now - lastTouchTimeRef.current < 800) {
+            return;
+        }
     }
 
     if (gameState === 'IDLE') {
