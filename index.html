@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小牛打小豬</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Custom animation for the mallet swing */
+      @keyframes swing {
+        0% { transform: rotate(0deg); }
+        50% { transform: rotate(-45deg); }
+        100% { transform: rotate(0deg); }
+      }
+      .animate-swing {
+        animation: swing 0.1s ease-in-out;
+      }
+      
+      /* Stars animation */
+      @keyframes spin-stars {
+        0% { transform: rotate(0deg) scale(1); opacity: 1; }
+        100% { transform: rotate(360deg) scale(1.5); opacity: 0; }
+      }
+      .animate-stars {
+        animation: spin-stars 0.8s ease-out forwards;
+      }
+
+      /* Shake animation for hit */
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px) rotate(-5deg); }
+        75% { transform: translateX(5px) rotate(5deg); }
+      }
+      .animate-shake {
+        animation: shake 0.3s ease-in-out;
+      }
+
+      /* Pop in/out for level text */
+      @keyframes pop-in {
+        0% { transform: scale(0); opacity: 0; }
+        60% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .animate-pop-in {
+        animation: pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+
+      body {
+        cursor: none; /* Hide default cursor */
+        user-select: none;
+      }
+      
+      /* Only show custom cursor on non-touch devices or handle via JS */
+      @media (hover: none) and (pointer: coarse) {
+        body {
+          cursor: auto;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+</head>
+  <body class="bg-green-100 overflow-hidden touch-none">
+    <div id="root"></div>
+    <!-- 這裡增加了對 index.tsx 的引用，這是 Vercel/Vite 建置成功的關鍵 -->
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
