@@ -13,14 +13,14 @@ interface Obstacle {
   passed: boolean; // Score counted?
 }
 
-// Game Constants
-const GRAVITY = 0.25;      // Reduced gravity for floatier, easier control
-const JUMP_STRENGTH = -3.5; // Reduced jump strength (was -5 or -6) for smaller hops
-const OBSTACLE_SPEED = 0.5; // Slightly slower for better reaction time
-const OBSTACLE_WIDTH = 15;  // Percentage
-const OBSTACLE_GAP = 32;    // Slightly wider gap
-const CALF_SIZE = 8;        // Percentage
-const CALF_X = 10;          // Fixed horizontal position (%)
+// Game Constants - Adjusted for "Slower & Easier" mobile experience
+const GRAVITY = 0.12;       // Very low gravity for floaty feel
+const JUMP_STRENGTH = -2.2; // Gentle jump
+const OBSTACLE_SPEED = 0.35; // Slower horizontal speed
+const OBSTACLE_WIDTH = 15;  
+const OBSTACLE_GAP = 35;    // Wider gap for easier passage
+const CALF_SIZE = 8;        
+const CALF_X = 10;          
 
 const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'GAME_OVER'>('IDLE');
@@ -56,7 +56,7 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
     obstaclesRef.current = [];
     lastSpawnTimeRef.current = Date.now();
     
-    // Trigger Play State (Effect will start the loop)
+    // Trigger Play State
     setGameState('PLAYING');
   };
 
@@ -68,17 +68,24 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
 
   // Handle Input (Mouse/Touch)
   const handleInput = (e: React.MouseEvent | React.TouchEvent) => {
-    // e.preventDefault(); // Removed to allow button clicks to work naturally, we handle logic by state
-    
-    // If clicking on specific UI elements (like Back button), don't trigger jump
-    if ((e.target as HTMLElement).closest('button')) return;
+    // 1. Allow button interactions to pass through normally
+    if ((e.target as HTMLElement).closest('button')) {
+        return;
+    }
+
+    // 2. Prevent default browser behavior (scrolling, zooming) for gameplay touches
+    // Using a type guard to access preventDefault which exists on both, 
+    // but specifically targeting touchstart to stop 'pull to refresh' etc.
+    if (e.type === 'touchstart') {
+        // e.preventDefault(); // Note: React synthetic events might trigger warnings if passive.
+        // We rely on CSS touch-action: none mostly, but stopping propagation helps too.
+    }
 
     if (gameState === 'IDLE') {
        startGame();
     } else if (gameState === 'PLAYING') {
        jump();
     }
-    // Note: 'GAME_OVER' restart is handled by the "Try Again" button explicitly
   };
 
   const gameOver = () => {
@@ -91,7 +98,6 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
   };
 
   // Game Loop managed by Effect
-  // This prevents stale closures and ensures clean restart behavior
   useEffect(() => {
     if (gameState !== 'PLAYING') return;
 
@@ -100,7 +106,6 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
 
     const loop = () => {
       const now = Date.now();
-      // const deltaTime = now - lastTime; // Can be used for smoother movement if needed
       lastTime = now;
 
       // 1. Physics
@@ -123,7 +128,8 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
       obstaclesRef.current = obstaclesRef.current.filter(obs => obs.x > -OBSTACLE_WIDTH);
 
       // Spawn new
-      if (now - lastSpawnTimeRef.current > 2000) { // Every 2 seconds approx
+      // Slower spawn rate to match slower speed (approx every 2.5s)
+      if (now - lastSpawnTimeRef.current > 2500) { 
           const minGapY = 10;
           const maxGapY = 90 - OBSTACLE_GAP;
           const gapTop = Math.floor(Math.random() * (maxGapY - minGapY + 1)) + minGapY;
@@ -175,8 +181,8 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
 
       // 4. Update UI State
       setCalfY(calfYRef.current);
-      // Rotation limits (-25 up, 45 down)
-      const rot = Math.min(Math.max(velocityRef.current * 4, -25), 45);
+      // Rotation limits
+      const rot = Math.min(Math.max(velocityRef.current * 5, -20), 30);
       setCalfRotation(rot);
 
       animationFrameId = requestAnimationFrame(loop);
@@ -191,9 +197,10 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
 
   return (
     <div 
-        className="fixed inset-0 w-full h-[100dvh] bg-sky-300 overflow-hidden font-sans select-none touch-none"
+        className="fixed inset-0 w-full h-[100dvh] bg-sky-300 overflow-hidden font-sans select-none touch-none overscroll-none"
         onMouseDown={handleInput}
         onTouchStart={handleInput}
+        style={{ overscrollBehavior: 'none' }} // Ensure no bounce effect
     >
         {/* Background Clouds/Scenery */}
         <div className="absolute inset-0 pointer-events-none">
@@ -210,7 +217,7 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
         <div className="relative w-full h-full max-w-2xl mx-auto border-x-4 border-black/10 bg-sky-200/20 backdrop-blur-[1px]">
             
             {/* Header / Score */}
-            <div className="absolute top-8 sm:top-10 w-full text-center z-20 pointer-events-none">
+            <div className="absolute top-12 sm:top-10 w-full text-center z-20 pointer-events-none">
                 <span className="text-6xl font-black text-white drop-shadow-[0_4px_0_rgba(0,0,0,0.3)] stroke-black" style={{WebkitTextStroke: '2px black'}}>
                     {score}
                 </span>
@@ -218,10 +225,11 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
             </div>
 
             {/* Back Button */}
-            <div className="absolute top-4 left-4 z-50">
+            <div className="absolute top-6 left-6 z-50">
                 <button 
                     onClick={(e) => { e.stopPropagation(); onBack(); }}
-                    className="bg-white/80 p-2 rounded-full hover:bg-white transition shadow-lg border-2 border-amber-800 active:scale-90"
+                    className="bg-white/80 p-3 rounded-full hover:bg-white transition shadow-lg border-2 border-amber-800 active:scale-90"
+                    style={{ touchAction: 'manipulation' }}
                 >
                 ⬅️ 離開
                 </button>
@@ -254,7 +262,7 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
 
             {/* The Calf */}
             <div 
-                className="absolute z-10 flex justify-center items-center pointer-events-none transition-transform duration-75 ease-linear"
+                className="absolute z-10 flex justify-center items-center pointer-events-none transition-transform duration-100 ease-linear"
                 style={{ 
                     left: `${CALF_X}%`, 
                     top: `${calfY}%`, 
@@ -266,14 +274,14 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
                 <div className="relative text-[3.5rem] leading-none filter drop-shadow-lg">
                     {/* Cow Body */}
                     🐮
-                    {/* Wings - New Addition */}
+                    {/* Wings */}
                     <div className="absolute top-2 -left-2 text-4xl animate-pulse origin-bottom-right" style={{ animationDuration: '0.2s' }}>🪽</div>
                     
                     {/* Goggles */}
                     <div className="absolute top-2 left-0 text-3xl opacity-90">🥽</div>
                     
                     {/* Speed Lines effect when falling fast */}
-                    {velocityRef.current > 2 && (
+                    {velocityRef.current > 1.5 && (
                        <div className="absolute -top-10 left-1 text-2xl rotate-90 opacity-50">💨</div>
                     )}
                 </div>
@@ -305,6 +313,7 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
                                 startGame(); 
                             }}
                             className="bg-green-500 hover:bg-green-600 text-white text-xl font-black py-3 px-8 rounded-full shadow-lg transform transition active:scale-95 border-b-4 border-green-700 w-full"
+                            style={{ touchAction: 'manipulation' }}
                         >
                             再試一次 🔄
                         </button>
