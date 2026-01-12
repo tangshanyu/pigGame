@@ -1,3 +1,4 @@
+
 export enum GameStatus {
   IDLE = 'IDLE',
   PLAYING = 'PLAYING',
@@ -11,8 +12,11 @@ export enum MoleState {
   HIT = 'HIT', // Bonked
 }
 
+export type MoleType = 'NORMAL' | 'GOLD' | 'BOMB';
+
 export interface Mole {
   id: number;
   state: MoleState;
   nextAppearanceTime: number;
+  type: MoleType; // New field
 }

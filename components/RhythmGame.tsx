@@ -17,7 +17,7 @@ interface Note {
 const HIT_ZONE_Y = 80; // % from top
 const APPROACH_TIME = 2.0; // Seconds for note to travel from top to hit zone
 const HIT_WINDOW_PERFECT = 0.15;
-const HIT_WINDOW_GOOD = 0.3;
+const HIT_WINDOW_GOOD = 0.4; // Widened from 0.3 for better feel
 const SECONDS_PER_BEAT = 60 / BPM;
 const MAX_LIVES = 5;
 const GAME_DURATION_UNTIL_BOSS = 30; // seconds
@@ -42,7 +42,8 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [lives, setLives] = useState(MAX_LIVES);
-  const [notes, setNotes] = useState<Note[]>([]);
+  // We keep state for rendering, but logic uses Ref
+  const [notes, setNotes] = useState<Note[]>([]); 
   const [feedback, setFeedback] = useState<{ text: string; color: string; id: number } | null>(null);
   const [unlockedNotif, setUnlockedNotif] = useState<string | null>(null);
 
@@ -54,15 +55,20 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
   const [bossMaxHealth] = useState(50);
   const [bossTimer, setBossTimer] = useState(10); // 10 seconds to kill boss
   
-  // Refs
+  // Refs for Game Loop Logic (Source of Truth)
+  const notesRef = useRef<Note[]>([]);
   const scoreRef = useRef(0);
   const livesRef = useRef(MAX_LIVES);
   const phaseRef = useRef<'PLAYING' | 'BOSS' | 'RESULTS'>('PLAYING');
+  const comboRef = useRef(0);
+  const isFeverRef = useRef(false);
   
-  // Update refs when state changes
+  // Update refs when state changes (for things that change infrequently or via UI)
   useEffect(() => { scoreRef.current = score; }, [score]);
   useEffect(() => { livesRef.current = lives; }, [lives]);
   useEffect(() => { phaseRef.current = gamePhase; }, [gamePhase]);
+  useEffect(() => { comboRef.current = combo; }, [combo]);
+  useEffect(() => { isFeverRef.current = isFever; }, [isFever]);
 
   const [activeLanes, setActiveLanes] = useState<boolean[]>([false, false, false]);
   
@@ -77,11 +83,7 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
     const newCow = COW_SKINS.slice().reverse().find(s => score >= s.minScore);
     const newDrum = DRUM_SKINS.slice().reverse().find(s => score >= s.minScore);
     
-    // Simple check: In a real app we'd store "unlocked" state persistently. 
-    // Here we just notify if they crossed a threshold recently.
-    // For simplicity in this loop, we just render the best available.
-    
-    // Show notification for milestones (hacky way: checking modulo roughly or specific values)
+    // Show notification for milestones
     if (score === 200) { setUnlockedNotif("解鎖造型：墨鏡牛！"); playSound('UNLOCK'); setTimeout(() => setUnlockedNotif(null), 3000); }
     if (score === 500) { setUnlockedNotif("解鎖造型：外星牛！"); playSound('UNLOCK'); setTimeout(() => setUnlockedNotif(null), 3000); }
     if (score === 800) { setUnlockedNotif("解鎖鼓面：黃金豬王！"); playSound('UNLOCK'); setTimeout(() => setUnlockedNotif(null), 3000); }
@@ -116,6 +118,8 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
       const audioStartTime = await startFarmBGM();
       startTimeRef.current = audioStartTime;
       nextSpawnBeatRef.current = 1; 
+      notesRef.current = []; // Clear notes on start
+      setNotes([]);
 
       const loop = () => {
         const currentTime = getAudioTime();
@@ -123,13 +127,11 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
         // --- BOSS TRIGGER CHECK ---
         if (phaseRef.current === 'PLAYING' && currentTime - startTimeRef.current > GAME_DURATION_UNTIL_BOSS) {
             setGamePhase('BOSS');
-            setNotes([]); // Clear notes
-            // Stop spawning logic in this loop, handled by UI state
+            notesRef.current = [];
+            setNotes([]);
         }
 
         if (phaseRef.current === 'BOSS') {
-            // In Boss phase, we don't spawn notes. We just render visuals.
-            // Boss timer logic handled in separate interval or simple check here
              setRenderTime(Date.now());
              reqRef.current = requestAnimationFrame(loop);
              return;
@@ -142,46 +144,50 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
             return;
         }
 
-        // Spawning
+        // --- SPAWNING ---
         const nextTargetTime = startTimeRef.current + (nextSpawnBeatRef.current * SECONDS_PER_BEAT);
         if (currentTime >= nextTargetTime - APPROACH_TIME) {
            const currentScore = scoreRef.current;
            const density = Math.min(0.4 + (currentScore * 0.005), 0.9); 
            if (Math.random() < density) {
-              setNotes(prev => [
-                ...prev,
-                {
+              const newNote: Note = {
                   id: nextSpawnBeatRef.current,
                   lane: Math.floor(Math.random() * 3) as 0 | 1 | 2,
                   targetTime: nextTargetTime,
                   hit: false,
                   missed: false
-                }
-              ]);
+              };
+              notesRef.current.push(newNote); // Direct push to Ref
            }
            nextSpawnBeatRef.current++;
         }
 
-        // Update Notes
-        setNotes(prev => {
-           let hasMiss = false;
-           const updatedNotes = prev.map(n => {
+        // --- UPDATE & PRUNE ---
+        // Modify notes inside Ref directly for hit/miss status
+        let hasMiss = false;
+        
+        // We filter a NEW array for React state, but keep modifying objects in Ref
+        // Remove old notes from Ref
+        notesRef.current = notesRef.current.filter(n => currentTime < n.targetTime + 1.0);
+        
+        notesRef.current.forEach(n => {
              if (!n.hit && !n.missed && currentTime > n.targetTime + HIT_WINDOW_GOOD) {
                n.missed = true;
                hasMiss = true;
              }
-             return n;
-           });
+        });
 
-           if (hasMiss) {
-             setCombo(0); // This will kill fever via useEffect
+        if (hasMiss) {
+             setCombo(0); 
              setLives(l => Math.max(0, l - 1));
              playSound('RHYTHM_MISS');
              setFeedback({ text: "MISS", color: "text-gray-500", id: Date.now() });
              setTimeout(() => setFeedback(null), 400);
-           }
-           return updatedNotes.filter(n => currentTime < n.targetTime + 1.0);
-        });
+        }
+
+        // Sync Ref to State for Rendering
+        // We create a shallow copy so React detects change, but objects are references
+        setNotes([...notesRef.current]);
 
         setRenderTime(Date.now());
         reqRef.current = requestAnimationFrame(loop);
@@ -195,9 +201,6 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
     }
 
     return () => {
-      // Don't stop BGM here if transitioning to Boss, actually we want music to keep going
-      // But for simplicity of this code structure, we might restart loop. 
-      // Optimized: The loop above handles phase switch without killing BGM.
       if (reqRef.current) cancelAnimationFrame(reqRef.current);
     };
   }, [isPlaying, gamePhase]);
@@ -209,7 +212,6 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
         timer = window.setInterval(() => {
             setBossTimer(t => {
                 if (t <= 0) {
-                    // Time up, failed boss
                     setGamePhase('RESULTS');
                     setGameOver(true);
                     stopBGM();
@@ -223,31 +225,32 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
   }, [gamePhase]);
 
   // Input Handling
+  // Optimized to use Ref so it doesn't need to be recreated or depend on stale closures
   const handleLanePress = (laneIndex: number) => {
     if (!isPlaying || gamePhase === 'RESULTS') return;
     
     // Visual Tap
-    const newActive = [...activeLanes];
-    newActive[laneIndex] = true;
-    setActiveLanes(newActive);
+    setActiveLanes(prev => {
+        const n = [...prev];
+        n[laneIndex] = true;
+        return n;
+    });
     setTimeout(() => {
         setActiveLanes(prev => {
-            const reset = [...prev];
-            reset[laneIndex] = false;
-            return reset;
+            const n = [...prev];
+            n[laneIndex] = false;
+            return n;
         });
     }, 100);
 
     // --- BOSS FIGHT INPUT ---
     if (gamePhase === 'BOSS') {
-        // Any tap hurts the boss
         playSound('BOSS_HIT');
         setBossHealth(h => {
             const newHealth = h - 1;
             if (newHealth <= 0) {
-                // VICTORY
                 playSound('BOSS_DEFEATED');
-                setScore(s => s + 1000); // Big bonus
+                setScore(s => s + 1000);
                 setFeedback({ text: "BOSS DEFEATED!", color: "text-yellow-500", id: Date.now() });
                 setGamePhase('RESULTS');
                 setGameOver(true);
@@ -256,13 +259,15 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
             }
             return newHealth;
         });
-        // Slight screen shake or visual feedback could go here
         return;
     }
 
     // --- NORMAL PLAY INPUT ---
     const currentTime = getAudioTime();
-    const validNotes = notes.filter(n => n.lane === laneIndex && !n.hit && !n.missed);
+    // CRITICAL: Read from Ref to get the absolute latest state
+    const currentNotes = notesRef.current;
+    
+    const validNotes = currentNotes.filter(n => n.lane === laneIndex && !n.hit && !n.missed);
     
     let targetNote: Note | null = null;
     let minDiff = Infinity;
@@ -278,19 +283,23 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
     if (targetNote && minDiff <= HIT_WINDOW_GOOD) {
       const isPerfect = minDiff <= HIT_WINDOW_PERFECT;
       const basePoints = isPerfect ? 50 : 20;
-      const multiplier = isFever ? 2 : 1;
+      const multiplier = isFeverRef.current ? 2 : 1;
       const points = basePoints * multiplier;
       
       const text = isPerfect ? "PERFECT!" : "GOOD!";
       const color = isPerfect ? "text-yellow-400" : "text-green-400";
       
+      // Mutate the object in Ref directly so next loop iteration sees it immediately
+      targetNote.hit = true;
+      
       playSound('RHYTHM_HIT');
-      setScore(s => s + points + (combo * 5));
+      setScore(s => s + points + (comboRef.current * 5));
       setCombo(c => c + 1);
       
-      setNotes(prev => prev.map(n => n.id === targetNote!.id ? { ...n, hit: true } : n));
+      // Force UI update
+      setNotes([...notesRef.current]);
       
-      setFeedback({ text: isFever ? `${text} x2` : text, color, id: Date.now() });
+      setFeedback({ text: isFeverRef.current ? `${text} x2` : text, color, id: Date.now() });
       setTimeout(() => setFeedback(null), 400);
     }
   };
@@ -305,12 +314,13 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, gamePhase, notes]);
+  }, [isPlaying, gamePhase]); // Dependency list minimized, handles internal state via Refs
 
   const restartGame = () => {
     setScore(0);
     setCombo(0);
     setLives(MAX_LIVES);
+    notesRef.current = [];
     setNotes([]);
     setGameOver(false);
     setIsPlaying(true);
@@ -429,9 +439,6 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
                 
                 const currentTime = getAudioTime();
                 const timeUntilHit = note.targetTime - currentTime;
-                // In Fever, visually speed up (cheat by mapping progress differently or just leave strictly time based)
-                // Since user complained about sync, stick to strict time based.
-                // Illusion of speed can be done by background moving.
                 const progress = 1 - (timeUntilHit / APPROACH_TIME);
                 
                 const topY = -10;
@@ -478,6 +485,7 @@ const RhythmGame: React.FC<RhythmGameProps> = ({ onBack }) => {
             <button
               key={lane}
               className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full border-b-8 transition-all shadow-xl flex items-center justify-center relative overflow-hidden ring-4 ${currentDrum.ring} ${currentDrum.color} ${gamePhase === 'BOSS' ? 'border-red-600 bg-red-400 ring-red-200 animate-pulse' : 'border-pink-500'} ${activeLanes[lane] ? 'translate-y-2 brightness-90' : ''}`}
+              style={{ touchAction: 'none' }}
               onTouchStart={(e) => { e.preventDefault(); handleLanePress(lane); }}
               onMouseDown={(e) => { e.preventDefault(); handleLanePress(lane); }}
             >

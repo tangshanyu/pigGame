@@ -211,7 +211,7 @@ export const stopBGM = () => {
   bgmNodes = [];
 };
 
-export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' | 'BOSS_HIT' | 'UNLOCK' | 'BOSS_DEFEATED') => {
+export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' | 'BOSS_HIT' | 'UNLOCK' | 'BOSS_DEFEATED' | 'GOLD_HIT' | 'BOMB_HIT' | 'JUMP' | 'CRASH') => {
   const ctx = getAudioContext();
   if (!ctx) return;
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -252,34 +252,85 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     gain.connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.25);
-  } else if (type === 'RHYTHM_HIT') {
-    // Cute Pig Drum (High Pitch Kick + Squeak)
+  } else if (type === 'GOLD_HIT') {
+    // High coin sound
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.setValueAtTime(1800, t + 0.1);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.3);
+    
+    // Sparkle
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(2000, t);
+    osc2.frequency.linearRampToValueAtTime(2500, t + 0.2);
+    gain2.gain.setValueAtTime(0.1, t);
+    gain2.gain.linearRampToValueAtTime(0, t + 0.2);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(t);
+    osc2.stop(t + 0.2);
+
+  } else if (type === 'BOMB_HIT' || type === 'CRASH') {
+    // Low crash / Impact
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(100, t);
+    osc.frequency.exponentialRampToValueAtTime(10, t + 0.3);
+    gain.gain.setValueAtTime(0.8, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  } else if (type === 'JUMP') {
+    // Quick rising pitch
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(300, t);
-    osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.15);
-    gain.gain.setValueAtTime(0.6, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.frequency.linearRampToValueAtTime(500, t + 0.1);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start(t);
-    osc.stop(t + 0.15);
-    
-    // Oink
-    const oinkOsc = ctx.createOscillator();
-    const oinkGain = ctx.createGain();
-    oinkOsc.type = 'sawtooth';
-    oinkOsc.frequency.setValueAtTime(500, t);
-    oinkOsc.frequency.linearRampToValueAtTime(700, t + 0.05);
-    oinkGain.gain.setValueAtTime(0.2, t);
-    oinkGain.gain.linearRampToValueAtTime(0, t + 0.08);
-    oinkOsc.connect(oinkGain);
-    oinkGain.connect(ctx.destination);
-    oinkOsc.start(t);
-    oinkOsc.stop(t + 0.08);
-
+    osc.stop(t + 0.1);
+  } else if (type === 'RHYTHM_HIT') {
+     // ... (Existing code kept same)
+     const osc = ctx.createOscillator();
+     const gain = ctx.createGain();
+     osc.type = 'sine';
+     osc.frequency.setValueAtTime(300, t);
+     osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.15);
+     gain.gain.setValueAtTime(0.6, t);
+     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+     osc.connect(gain);
+     gain.connect(ctx.destination);
+     osc.start(t);
+     osc.stop(t + 0.15);
+     const oinkOsc = ctx.createOscillator();
+     const oinkGain = ctx.createGain();
+     oinkOsc.type = 'sawtooth';
+     oinkOsc.frequency.setValueAtTime(500, t);
+     oinkOsc.frequency.linearRampToValueAtTime(700, t + 0.05);
+     oinkGain.gain.setValueAtTime(0.2, t);
+     oinkGain.gain.linearRampToValueAtTime(0, t + 0.08);
+     oinkOsc.connect(oinkGain);
+     oinkGain.connect(ctx.destination);
+     oinkOsc.start(t);
+     oinkOsc.stop(t + 0.08);
   } else if (type === 'RHYTHM_MISS') {
+     // ... (Existing code)
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sawtooth';
@@ -292,7 +343,7 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc.start(t);
     osc.stop(t + 0.2);
   } else if (type === 'BOSS_HIT') {
-    // Heavy Hit
+    // ... (Existing code)
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'square';
@@ -305,14 +356,14 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc.start(t);
     osc.stop(t + 0.1);
   } else if (type === 'UNLOCK') {
-    // Chime
+    // ... (Existing code)
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(523.25, t); // C5
-    osc.frequency.setValueAtTime(659.25, t + 0.1); // E5
-    osc.frequency.setValueAtTime(783.99, t + 0.2); // G5
-    osc.frequency.setValueAtTime(1046.50, t + 0.3); // C6
+    osc.frequency.setValueAtTime(523.25, t); 
+    osc.frequency.setValueAtTime(659.25, t + 0.1); 
+    osc.frequency.setValueAtTime(783.99, t + 0.2); 
+    osc.frequency.setValueAtTime(1046.50, t + 0.3); 
     gain.gain.setValueAtTime(0.1, t);
     gain.gain.linearRampToValueAtTime(0.3, t + 0.3);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
@@ -321,7 +372,7 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc.start(t);
     osc.stop(t + 1.0);
   } else if (type === 'BOSS_DEFEATED') {
-    // Explosionish
+    // ... (Existing code)
     const bufferSize = ctx.sampleRate * 2;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
