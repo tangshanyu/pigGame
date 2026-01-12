@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import WhacAMoleGame from './components/WhacAMoleGame';
 import RhythmGame from './components/RhythmGame';
 import FlyingCalfGame from './components/FlyingCalfGame';
+import MilkingGame from './components/MilkingGame';
 
-type ViewState = 'MENU' | 'WHAC_A_MOLE' | 'RHYTHM' | 'FLYING';
+type ViewState = 'MENU' | 'WHAC_A_MOLE' | 'RHYTHM' | 'FLYING' | 'MILKING';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('MENU');
@@ -19,6 +20,10 @@ const App: React.FC = () => {
 
   if (view === 'FLYING') {
     return <FlyingCalfGame onBack={() => setView('MENU')} />;
+  }
+
+  if (view === 'MILKING') {
+    return <MilkingGame onBack={() => setView('MENU')} />;
   }
 
   return (
@@ -45,7 +50,7 @@ const App: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl pb-8 shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6 w-full max-w-6xl pb-8 shrink-0 px-4">
           
           {/* Card 1: Whac-A-Mole */}
           <button 
@@ -61,8 +66,7 @@ const App: React.FC = () => {
             <div>
               <h2 className="text-2xl font-black text-gray-800 mb-2">小牛打小豬</h2>
               <p className="text-gray-500 font-medium text-sm">
-                  拿著木槌，把那些調皮的小豬敲回去！<br/>
-                  (小心不要敲到手喔)
+                  拿著木槌，把那些調皮的小豬敲回去！
               </p>
             </div>
           </button>
@@ -81,8 +85,7 @@ const App: React.FC = () => {
             <div>
               <h2 className="text-2xl font-black text-gray-800 mb-2">小牛跳跳樂</h2>
               <p className="text-gray-500 font-medium text-sm">
-                  跟著佩奇風格的音樂節奏，<br/>
-                  接住掉下來的小牛們！
+                  跟著佩奇風格的音樂節奏，接住掉下來的小牛們！
               </p>
             </div>
           </button>
@@ -101,8 +104,26 @@ const App: React.FC = () => {
             <div>
               <h2 className="text-2xl font-black text-gray-800 mb-2">小牛飛天</h2>
               <p className="text-gray-500 font-medium text-sm">
-                  點擊螢幕讓小牛飛起來，<br/>
-                  閃避前方的豬柵欄！
+                  點擊螢幕讓小牛飛起來，閃避前方的豬柵欄！
+              </p>
+            </div>
+          </button>
+
+          {/* Card 4: Milking Game */}
+          <button 
+            onClick={() => setView('MILKING')}
+            className="group relative bg-white rounded-[2rem] p-6 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 border-b-8 border-orange-200 active:border-b-0 active:translate-y-0 h-full min-h-[300px] flex flex-col items-center justify-between"
+          >
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-4 py-1 rounded-full font-bold shadow-md text-sm whitespace-nowrap">
+              擠奶模式
+            </div>
+            <div className="text-7xl mb-4 group-hover:scale-110 transition-transform mt-4">
+               🐄🥛
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-gray-800 mb-2">急速擠奶王</h2>
+              <p className="text-gray-500 font-medium text-sm">
+                  要在母牛生氣前，快速擠滿所有的牛奶瓶！
               </p>
             </div>
           </button>

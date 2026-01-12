@@ -198,7 +198,7 @@ export const stopBGM = () => {
   bgmNodes = [];
 };
 
-export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' | 'BOSS_HIT' | 'UNLOCK' | 'BOSS_DEFEATED' | 'GOLD_HIT' | 'BOMB_HIT' | 'JUMP' | 'CRASH' | 'EAT' | 'POWER_UP' | 'SMASH') => {
+export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' | 'BOSS_HIT' | 'UNLOCK' | 'BOSS_DEFEATED' | 'GOLD_HIT' | 'BOMB_HIT' | 'JUMP' | 'CRASH' | 'EAT' | 'POWER_UP' | 'SMASH' | 'BUZZ' | 'SPLAT' | 'CONVEYOR') => {
   const ctx = getAudioContext();
   if (!ctx) return;
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -225,15 +225,19 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc.start(t);
     osc.stop(t + 0.5);
 
-  } else if (type === 'SQUEAL') {
+  } else if (type === 'SQUEAL' || type === 'BUZZ') {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'sine'; 
-    osc.frequency.setValueAtTime(800, t);
-    osc.frequency.linearRampToValueAtTime(1600, t + 0.05); 
-    osc.frequency.linearRampToValueAtTime(800, t + 0.15); 
+    osc.type = type === 'BUZZ' ? 'sawtooth' : 'sine'; 
+    osc.frequency.setValueAtTime(type === 'BUZZ' ? 150 : 800, t);
+    if (type === 'BUZZ') {
+        osc.frequency.linearRampToValueAtTime(180, t + 0.1);
+    } else {
+        osc.frequency.linearRampToValueAtTime(1600, t + 0.05); 
+        osc.frequency.linearRampToValueAtTime(800, t + 0.15); 
+    }
     gain.gain.setValueAtTime(0.0, t);
-    gain.gain.linearRampToValueAtTime(0.5, t + 0.02);
+    gain.gain.linearRampToValueAtTime(type === 'BUZZ' ? 0.1 : 0.5, t + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -266,7 +270,7 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     osc2.start(t);
     osc2.stop(t + 0.2);
 
-  } else if (type === 'BOMB_HIT' || type === 'CRASH') {
+  } else if (type === 'BOMB_HIT' || type === 'CRASH' || type === 'SPLAT') {
     // Low crash / Impact
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -292,29 +296,36 @@ export const playSound = (type: 'MOO' | 'SQUEAL' | 'RHYTHM_HIT' | 'RHYTHM_MISS' 
     gain.connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.1);
-  } else if (type === 'RHYTHM_HIT') {
+  } else if (type === 'RHYTHM_HIT' || type === 'CONVEYOR') {
      const osc = ctx.createOscillator();
      const gain = ctx.createGain();
      osc.type = 'sine';
-     osc.frequency.setValueAtTime(300, t);
-     osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.15);
-     gain.gain.setValueAtTime(0.6, t);
+     osc.frequency.setValueAtTime(type === 'CONVEYOR' ? 100 : 300, t);
+     if (type === 'CONVEYOR') {
+         osc.frequency.linearRampToValueAtTime(120, t + 0.1);
+     } else {
+         osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.15);
+     }
+     gain.gain.setValueAtTime(type === 'CONVEYOR' ? 0.3 : 0.6, t);
      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
      osc.connect(gain);
      gain.connect(ctx.destination);
      osc.start(t);
      osc.stop(t + 0.15);
-     const oinkOsc = ctx.createOscillator();
-     const oinkGain = ctx.createGain();
-     oinkOsc.type = 'sawtooth';
-     oinkOsc.frequency.setValueAtTime(500, t);
-     oinkOsc.frequency.linearRampToValueAtTime(700, t + 0.05);
-     oinkGain.gain.setValueAtTime(0.2, t);
-     oinkGain.gain.linearRampToValueAtTime(0, t + 0.08);
-     oinkOsc.connect(oinkGain);
-     oinkGain.connect(ctx.destination);
-     oinkOsc.start(t);
-     oinkOsc.stop(t + 0.08);
+     
+     if (type === 'RHYTHM_HIT') {
+        const oinkOsc = ctx.createOscillator();
+        const oinkGain = ctx.createGain();
+        oinkOsc.type = 'sawtooth';
+        oinkOsc.frequency.setValueAtTime(500, t);
+        oinkOsc.frequency.linearRampToValueAtTime(700, t + 0.05);
+        oinkGain.gain.setValueAtTime(0.2, t);
+        oinkGain.gain.linearRampToValueAtTime(0, t + 0.08);
+        oinkOsc.connect(oinkGain);
+        oinkGain.connect(ctx.destination);
+        oinkOsc.start(t);
+        oinkOsc.stop(t + 0.08);
+     }
   } else if (type === 'RHYTHM_MISS') {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
