@@ -14,11 +14,12 @@ interface Obstacle {
 }
 
 // Game Constants - Adjusted for "Slower & Easier" mobile experience
-const GRAVITY = 0.12;       // Very low gravity for floaty feel
-const JUMP_STRENGTH = -2.2; // Gentle jump
-const OBSTACLE_SPEED = 0.35; // Slower horizontal speed
+// Further reduced gravity and jump strength for micro-control
+const GRAVITY = 0.08;       // Extremely low gravity
+const JUMP_STRENGTH = -1.2; // Very small hop (approx half of previous)
+const OBSTACLE_SPEED = 0.35; 
 const OBSTACLE_WIDTH = 15;  
-const OBSTACLE_GAP = 35;    // Wider gap for easier passage
+const OBSTACLE_GAP = 35;    
 const CALF_SIZE = 8;        
 const CALF_X = 10;          
 
@@ -74,11 +75,8 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
     }
 
     // 2. Prevent default browser behavior (scrolling, zooming) for gameplay touches
-    // Using a type guard to access preventDefault which exists on both, 
-    // but specifically targeting touchstart to stop 'pull to refresh' etc.
     if (e.type === 'touchstart') {
-        // e.preventDefault(); // Note: React synthetic events might trigger warnings if passive.
-        // We rely on CSS touch-action: none mostly, but stopping propagation helps too.
+        // e.preventDefault(); 
     }
 
     if (gameState === 'IDLE') {
@@ -128,7 +126,6 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
       obstaclesRef.current = obstaclesRef.current.filter(obs => obs.x > -OBSTACLE_WIDTH);
 
       // Spawn new
-      // Slower spawn rate to match slower speed (approx every 2.5s)
       if (now - lastSpawnTimeRef.current > 2500) { 
           const minGapY = 10;
           const maxGapY = 90 - OBSTACLE_GAP;
@@ -200,7 +197,7 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
         className="fixed inset-0 w-full h-[100dvh] bg-sky-300 overflow-hidden font-sans select-none touch-none overscroll-none"
         onMouseDown={handleInput}
         onTouchStart={handleInput}
-        style={{ overscrollBehavior: 'none' }} // Ensure no bounce effect
+        style={{ overscrollBehavior: 'none' }}
     >
         {/* Background Clouds/Scenery */}
         <div className="absolute inset-0 pointer-events-none">
@@ -272,13 +269,13 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
                 }}
             >
                 <div className="relative text-[3.5rem] leading-none filter drop-shadow-lg">
-                    {/* Cow Body */}
-                    🐮
-                    {/* Wings */}
-                    <div className="absolute top-2 -left-2 text-4xl animate-pulse origin-bottom-right" style={{ animationDuration: '0.2s' }}>🪽</div>
+                    {/* Horizontal Cow Body (Flipped to face right) */}
+                    <div className="transform scale-x-[-1]">
+                        🐄
+                    </div>
                     
-                    {/* Goggles */}
-                    <div className="absolute top-2 left-0 text-3xl opacity-90">🥽</div>
+                    {/* Wings - Adjusted for horizontal body */}
+                    <div className="absolute -top-3 left-3 text-4xl animate-pulse origin-bottom-right" style={{ animationDuration: '0.2s' }}>🪽</div>
                     
                     {/* Speed Lines effect when falling fast */}
                     {velocityRef.current > 1.5 && (
@@ -291,7 +288,7 @@ const FlyingCalfGame: React.FC<FlyingCalfGameProps> = ({ onBack }) => {
             {gameState === 'IDLE' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-30 pointer-events-none">
                     <div className="text-center animate-bounce">
-                        <div className="text-8xl mb-4 transform -rotate-12">🐮🪽</div>
+                        <div className="text-8xl mb-4 transform scale-x-[-1]">🐄🪽</div>
                         <h2 className="text-3xl font-black text-white stroke-black drop-shadow-lg">點擊開始飛行</h2>
                     </div>
                 </div>

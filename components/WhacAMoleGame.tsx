@@ -223,7 +223,7 @@ const WhacAMoleGame: React.FC<WhacAMoleGameProps> = ({ onBack }) => {
   };
 
   return (
-    <div className={`min-h-screen w-full bg-gradient-to-b ${getBgGradient()} flex flex-col items-center justify-center relative font-sans text-neutral-800 transition-colors duration-1000 cursor-none ${screenShake ? 'animate-shake bg-red-200' : ''}`}>
+    <div className={`min-h-screen w-full bg-gradient-to-b ${getBgGradient()} flex flex-col items-center justify-center relative font-sans text-neutral-800 transition-colors duration-1000 cursor-none touch-none ${screenShake ? 'animate-shake bg-red-200' : ''}`}>
       <CustomCursor isClicking={isClicking} />
 
       {/* Back Button */}
