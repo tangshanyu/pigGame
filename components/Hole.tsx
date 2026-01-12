@@ -22,46 +22,54 @@ const Hole: React.FC<HoleProps> = ({ mole, onHit }) => {
     }
   }, [isHit]);
 
+  const handleHit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Allow hitting slightly before fully visible (RISING) for better feel
+    if ((isVisible || mole.state === MoleState.RISING) && !isHit) {
+      onHit(mole.id);
+    }
+  };
+
   return (
     <div className="relative w-24 h-24 sm:w-32 sm:h-32 flex justify-center items-end mx-auto">
       {/* The Hole Graphic */}
       <div className="absolute bottom-0 w-full h-12 bg-neutral-800 rounded-[100%] border-b-4 border-neutral-700 shadow-inner z-0"></div>
       
-      {/* Masking container to make the pig appear from underground */}
-      <div className="relative w-full h-32 overflow-hidden z-10 flex justify-center items-end rounded-b-[2rem]">
+      {/* Masking container */}
+      <div className="relative w-full h-32 overflow-hidden z-10 flex justify-center items-end rounded-b-[2rem] pointer-events-none">
         
-        {/* The Pig */}
+        {/* The Pig Container - Added pointer-events-auto and expanded hit area */}
         <div
           className={`
-            absolute bottom-0 transition-transform duration-150 ease-out cursor-pointer select-none
+            absolute bottom-0 left-1/2 -translate-x-1/2
+            transition-transform duration-150 ease-out 
+            pointer-events-auto cursor-pointer
+            flex justify-center items-center
             ${isVisible ? 'translate-y-2' : 'translate-y-full'}
-            ${isHit ? 'translate-y-2' : ''}
-            ${isHit ? 'animate-shake' : ''}
+            ${isHit ? 'translate-y-2 animate-shake' : ''}
           `}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isVisible && !isHit) {
-              onHit(mole.id);
-            }
-          }}
+          onClick={handleHit}
         >
+          {/* Invisible Hit Box - Extends well beyond the emoji */}
+          <div className="absolute w-[140%] h-[140%] -top-[20%] -left-[20%] z-20 bg-transparent rounded-full"></div>
+
           {/* Pig Sprite/Emoji */}
-          <div className="text-[4rem] sm:text-[5rem] leading-none filter drop-shadow-xl relative transform transition-transform hover:scale-105 active:scale-95">
+          <div className="text-[4rem] sm:text-[5rem] leading-none filter drop-shadow-xl relative transform transition-transform hover:scale-105 active:scale-95 z-10">
             {isHit ? '🐷' : '🐷'}
             
             {/* Comic "POW" Effect */}
             {showPow && (
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none">
-                 <div className="relative">
-                   <span className="absolute text-6xl opacity-90 animate-ping">💥</span>
-                   <span className="relative text-red-600 font-black text-2xl rotate-12 drop-shadow-md stroke-white" style={{WebkitTextStroke: '1px white'}}>POW!</span>
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none w-max">
+                 <div className="relative flex justify-center items-center">
+                   <span className="absolute text-7xl opacity-90 animate-ping">💥</span>
+                   <span className="relative text-red-600 font-black text-3xl rotate-12 drop-shadow-md stroke-white select-none" style={{WebkitTextStroke: '1px white'}}>POW!</span>
                  </div>
                </div>
             )}
 
             {/* Dizzy Overlay */}
             {isHit && (
-              <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+              <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
                 <span className="absolute -top-4 text-3xl animate-stars">⭐</span>
                 <span className="absolute -top-2 -right-2 text-2xl animate-stars" style={{ animationDelay: '0.1s' }}>💫</span>
                 <span className="absolute -top-2 -left-2 text-2xl animate-stars" style={{ animationDelay: '0.2s' }}>⭐</span>
